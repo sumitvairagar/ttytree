@@ -232,6 +232,7 @@ Facts only — no summaries, no opinions, no model call. That's what makes it fr
 | `ttytree --all` | every tracked session | 0 |
 | `ttytree --events [n]` | raw facts the hook captured | 0 |
 | `ttytree --next` | only what's actionable right now | 0 |
+| `ttytree --json` | machine-readable output for other tools | 0 |
 | `ttytree --path` | tree file path, for hand-editing | 0 |
 | `ttytree --session <id>` | a specific session | 0 |
 | `ttytree --no-color` | plain output, for piping | 0 |
@@ -271,6 +272,25 @@ At most **one `[~]` per level** — that rule is what makes the tree answer *"wh
 am I doing right now"* rather than *"what's open"*.
 
 ---
+
+## Where this fits
+
+There are excellent Claude Code session managers already —
+[claude-squad](https://github.com/smtg-ai/claude-squad),
+[ccmanager](https://github.com/kbwo/ccmanager),
+[agent-deck](https://github.com/asheshgoplani/agent-deck),
+[opensessions](https://github.com/Ataraxy-Labs/opensessions). They tell you
+**which session needs you, and take you there.**
+
+None of them know **what the work inside a session is**. There's no notion of
+done vs. in progress vs. next vs. blocked — only running / waiting / idle.
+
+`ttytree` is that missing layer, and it's built to be consumed rather than to
+compete. `ttytree --json` is a stable, documented interface designed for exactly
+those tools to render — see [`docs/INTEGRATION.md`](docs/INTEGRATION.md). If you
+maintain one of them and want a "what's happening in this session" line or a tree
+in your sidebar, the data is one shell-out away and PRs are welcome in both
+directions.
 
 ## How it works
 
@@ -320,15 +340,21 @@ All local files. Nothing is sent anywhere.
 
 ## Roadmap
 
-- [ ] `ttytree --board` — all terminals with derived status: needs-you / working
-      / errored / blocked
-- [ ] iTerm & tmux tab colour + title driven by tree state, so a stuck terminal
-      is visible without asking
-- [ ] jump-to-terminal from the board (focus an iTerm tab by session id)
-- [ ] `SessionStart` hook that reloads the tree into context on resume
-- [ ] roll session trees up into a project view across terminals
-- [ ] time-in-state — a `[~]` stuck for two days should say so
-- [ ] `ttytree --since yesterday` for a standup-shaped summary
+Deliberately **not** on this list: a session board, tab colouring, or
+jump-to-terminal. Those are solved well by the tools above; duplicating them
+would trade this project's one advantage for a fight it can't win.
+
+- [ ] **Time-in-state** — a `[~]` that's been in progress for two days should say
+      so. Staleness is the signal you can't get anywhere else.
+- [ ] **Project rollup** — aggregate the session trees of every terminal in one
+      repo into a project-level view.
+- [ ] **`--since yesterday`** — a standup-shaped summary across sessions, built
+      from trees rather than from git log.
+- [ ] **`SessionStart` hook** — reload the tree into context on resume, so a
+      resumed session knows where it left off without being asked.
+- [ ] **Richer capture** — file paths written via shell redirection, test
+      pass/fail, dev-server ports (all in the hook, all still zero-token).
+- [ ] **Integrations** — reference patches for agent-deck and opensessions.
 
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -336,6 +362,11 @@ Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - [`tty-tree`](https://github.com/piotrmurach/tty-tree) — a Ruby gem for printing
   *directory* trees, part of the TTY toolkit. Unrelated project, similar name.
+- **Session managers** (claude-squad, ccmanager, agent-deck, opensessions) —
+  complementary, not competing. They handle *where*; this handles *what*. Use
+  both.
+- [`domux`](https://github.com/pranav7/domux) — per-worktree TODOs in tmux. The
+  closest idea, but manual and tmux-only.
 
 ## License
 

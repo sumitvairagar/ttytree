@@ -60,6 +60,11 @@ If `tree.md` does not exist, **seed it from your own context window** — you
 already know what this session has been doing, and that costs nothing. Do not go
 read files to reconstruct history.
 
+An event of the form `{"cold_start": true}` marks the moment ttytree began
+watching this session. Anything before it was never captured, so treat it as a
+boundary, not as activity: seed from context for that period rather than assuming
+nothing happened.
+
 ## Step 3 — reconcile
 
 Fold the new events into the tree:

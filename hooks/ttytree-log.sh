@@ -44,9 +44,19 @@ main() {
   events=$(tt_events "$sid")
 
   # --- incremental transcript read -----------------------------------------
-  local facts='{}' saw_new=0
+  local facts='{}' saw_new=0 cold=0
   if [ -n "$transcript" ] && [ -f "$transcript" ]; then
     size=$(stat -f %z "$transcript" 2>/dev/null || stat -c %s "$transcript" 2>/dev/null || echo 0)
+
+    # First time we've seen this session: the transcript may hold days of
+    # history. Parsing it would collapse all of it into one bogus "turn" and
+    # mislead the skill, so seek to the end and start capturing from here.
+    # The tree's initial contents get seeded from the model's own context.
+    if [ ! -f "$off_file" ]; then
+      printf '%s' "$size" > "$off_file" 2>/dev/null || true
+      cold=1
+    fi
+
     off=$(cat "$off_file" 2>/dev/null || echo 0)
     case "$off" in ''|*[!0-9]*) off=0 ;; esac
     [ "$off" -gt "$size" ] && off=0          # transcript rotated or truncated
@@ -57,6 +67,13 @@ main() {
       printf '%s' "$size" > "$off_file" 2>/dev/null || true
       saw_new=1
     fi
+  fi
+
+  if [ "$cold" -eq 1 ]; then
+    # Marker: everything before this point predates ttytree on this session.
+    printf '{"ts":%s,"cold_start":true,"cwd":"%s"}\n' "$(date +%s)" "$cwd" \
+      >> "$events" 2>/dev/null || true
+    return 0
   fi
 
   # Nothing new since the last turn: don't pad the log with empty events.
