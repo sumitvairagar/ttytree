@@ -103,6 +103,9 @@ Markers: `[ ]` next · `[~]` in progress · `[x]` done · `[!]` blocked · `[-]`
 The marker carries the state — write `- [!] staging credentials expired`, never
 `- [!] BLOCKED: staging credentials expired`.
 
+Never put emoji in the text. The renderer adds a category icon on its own
+(inferred from the words), so hand-written ones come out doubled.
+
 ## Step 5 — ALWAYS render. This step is not optional.
 
 The user ran this to **see the tree**. Finishing without showing it fails the

@@ -57,3 +57,34 @@ tt_ago() {
   else                          printf '%dd' "$((d/86400))"
   fi
 }
+
+# --- icons -----------------------------------------------------------------
+# Does this terminal look like it can render wide emoji?
+tt_unicode_ok() {
+  case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+    *UTF-8*|*utf8*|*UTF8*|*utf-8*) return 0 ;;
+  esac
+  return 1
+}
+
+# Category icons are inferred from the item text — nothing to write by hand,
+# so old trees light up too. Format: icon=regex;icon=regex;...  First match
+# wins, so specific domains come before generic verbs. Lowercased before
+# matching. Keep every icon two cells wide or the tree stops lining up.
+tt_icon_rules() {
+  printf '%s' \
+'🚀=deploy|release|ship|publish|rollout|launch|prod|staging|testflight|app store;'\
+'🐛=bug|crash|regress|broken|fail|panic|flaky|stack trace|traceback;'\
+'🧪=test|spec|e2e|coverage|snapshot|fixture|verif;'\
+'📝=doc|readme|changelog|write.up|blog post|comment;'\
+'🔀=commit|merge|rebase|pull request|branch|cherry.pick|conflict;'\
+'💾=database|schema|migration|postgres|sqlite|mysql|redis|query|table|backfill|sync|import|export|seed;'\
+'🔐=auth|login|sign|oauth|credential|permission|secret|security|password|key;'\
+'🔌=api|endpoint|route|webhook|graphql|grpc|payload|queue|worker|cron|middleware|integration;'\
+'🎨=ui|screen|page|css|style|layout|component|design|theme|button|modal|onboarding|icon;'\
+'📈=perf|slow|latency|optimi|cache|benchmark|profil|metric|analytic|rate limit|throttl;'\
+'🧹=refactor|cleanup|clean up|rename|tidy|dead code|lint|dedup|duplicat;'\
+'🔍=research|investigate|explore|spike|debug|root cause|reproduce|figure out|audit;'\
+'📦=package|bundle|npm|yarn|docker|dependenc|upgrade|version;'\
+'🔧=config|setup|install|env|tooling|script|flag|alert|log'
+}

@@ -77,6 +77,10 @@ state word stripped, so `- [!] BLOCKED: keys expired` surfaces as
 `"blocked": ["keys expired"]`. `items[].text` is always verbatim from the file —
 use it when you need exactly what the user wrote.
 
+Text never carries icons. The CLI infers a category icon (🐛, 🧪, 🚀 …) from the
+text at render time; the JSON stays plain so you can map states to your own
+glyph set — or match on the text yourself.
+
 ### Stability
 
 - Fields are **added**, never removed or repurposed, within a `version`.

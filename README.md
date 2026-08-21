@@ -8,14 +8,14 @@ up to date.
 $ ttytree
 
 pocketledger  ttys004 · idle · 7f3a1c92
-├─ ✔ Receipt OCR pipeline
-├─ ▸ Expense categorisation
-│  ├─ ✔ rules engine
-│  ├─ ▸ merchant matching
-│  │  └─ ○ collapse duplicate merchants
-│  └─ ○ user-defined categories
-├─ ⛔ Plaid sandbox keys expired
-└─ ○ Ship to TestFlight
+├─ ✔   Receipt OCR pipeline
+├─ ▸   Expense categorisation
+│  ├─ ✔   rules engine
+│  ├─ ▸   merchant matching
+│  │  └─ ○ 🧹 collapse duplicate merchants
+│  └─ ○   user-defined categories
+├─ ⛔ 🔐 Plaid sandbox keys expired
+└─ ○ 🚀 Ship to TestFlight
 
    3 turns, 5 files touched since this tree was updated
 ```
@@ -135,16 +135,16 @@ You switch to a tab you left before lunch. Instead of asking Claude anything:
 $ ttytree
 
 orchard-api  ttys000 · idle · 4e1b8a03
-├─ ✔ Postgres schema + migrations
-├─ ✔ JWT auth middleware
-├─ ▸ Webhook delivery
-│  ├─ ✔ signing + replay protection
-│  ├─ ▸ retry with exponential backoff
-│  │  ├─ ✔ jitter
-│  │  └─ ○ dead-letter queue
-│  └─ ○ delivery metrics
-├─ ○ Per-tenant rate limiting
-└─ ○ Deploy to staging
+├─ ✔ 💾 Postgres schema + migrations
+├─ ✔ 🔐 JWT auth middleware
+├─ ▸ 🔌 Webhook delivery
+│  ├─ ✔ 🔐 signing + replay protection
+│  ├─ ▸   retry with exponential backoff
+│  │  ├─ ✔   jitter
+│  │  └─ ○ 🔌 dead-letter queue
+│  └─ ○ 📈 delivery metrics
+├─ ○ 📈 Per-tenant rate limiting
+└─ ○ 🚀 Deploy to staging
 
    7 turns, 12 file(s) touched since this tree was updated — run /ttytree to fold them in
 ```
@@ -159,32 +159,32 @@ facts, not 144k of transcript.
 $ ttytree --all
 
 orchard-api  ttys000 · idle · 4e1b8a03
-├─ ✔ Postgres schema + migrations
-├─ ✔ JWT auth middleware
-├─ ▸ Webhook delivery
-│  ├─ ✔ signing + replay protection
-│  ├─ ▸ retry with exponential backoff
-│  │  ├─ ✔ jitter
-│  │  └─ ○ dead-letter queue
-│  └─ ○ delivery metrics
-├─ ○ Per-tenant rate limiting
-└─ ○ Deploy to staging
+├─ ✔ 💾 Postgres schema + migrations
+├─ ✔ 🔐 JWT auth middleware
+├─ ▸ 🔌 Webhook delivery
+│  ├─ ✔ 🔐 signing + replay protection
+│  ├─ ▸   retry with exponential backoff
+│  │  ├─ ✔   jitter
+│  │  └─ ○ 🔌 dead-letter queue
+│  └─ ○ 📈 delivery metrics
+├─ ○ 📈 Per-tenant rate limiting
+└─ ○ 🚀 Deploy to staging
 
 pocketledger  ttys004 · idle · 7f3a1c92
-├─ ✔ Receipt OCR pipeline
-├─ ▸ Expense categorisation
-│  ├─ ✔ rules engine
-│  ├─ ▸ merchant matching
-│  │  └─ ○ collapse duplicate merchants
-│  └─ ○ user-defined categories
-├─ ⛔ Plaid sandbox keys expired
-└─ ○ Ship to TestFlight
+├─ ✔   Receipt OCR pipeline
+├─ ▸   Expense categorisation
+│  ├─ ✔   rules engine
+│  ├─ ▸   merchant matching
+│  │  └─ ○ 🧹 collapse duplicate merchants
+│  └─ ○   user-defined categories
+├─ ⛔ 🔐 Plaid sandbox keys expired
+└─ ○ 🚀 Ship to TestFlight
 
 warehouse-etl  ttys002 · idle · c8f04a17
-├─ ✔ Nightly sync job
-├─ ▸ Backfill 2024 orders
-│  └─ ○ verify row counts against source
-└─ ⛔ API error — session stalled 50m ago
+├─ ✔ 💾 Nightly sync job
+├─ ▸ 💾 Backfill 2024 orders
+│  └─ ○ 🧪 verify row counts against source
+└─ ⛔ 🔌 API error — session stalled 50m ago
 ```
 
 Two blocked terminals, visible in one glance, without entering either tab.
@@ -199,15 +199,15 @@ Two blocked terminals, visible in one glance, without entering either tab.
   nothing is blocked.
 
 orchard-api  ttys000 · busy · 4e1b8a03
-├─ ✔ Postgres schema + migrations
-├─ ✔ JWT auth middleware
-├─ ▸ Webhook delivery
-│  ├─ ✔ signing + replay protection
-│  ├─ ✔ retry with exponential backoff
-│  ├─ ▸ delivery metrics
-│  └─ ○ alert on repeated failures
-├─ ○ Per-tenant rate limiting
-└─ ○ Deploy to staging
+├─ ✔ 💾 Postgres schema + migrations
+├─ ✔ 🔐 JWT auth middleware
+├─ ▸ 🔌 Webhook delivery
+│  ├─ ✔ 🔐 signing + replay protection
+│  ├─ ✔   retry with exponential backoff
+│  ├─ ▸ 📈 delivery metrics
+│  └─ ○ 🐛 alert on repeated failures
+├─ ○ 📈 Per-tenant rate limiting
+└─ ○ 🚀 Deploy to staging
 ```
 
 ### Quick edits without a model
@@ -263,16 +263,16 @@ $ ttytree --watch
 ttytree · 09:14:02 · refreshing every 5s · ctrl-c to quit
 
 orchard-api  ttys000 · idle · 4e1b8a03 · updated 2h ago
-├─ ✔ Postgres schema + migrations
-├─ ▸ Webhook delivery
-│  └─ ○ dead-letter queue
-└─ ○ Deploy to staging
+├─ ✔ 💾 Postgres schema + migrations
+├─ ▸ 🔌 Webhook delivery
+│  └─ ○ 🔌 dead-letter queue
+└─ ○ 🚀 Deploy to staging
 
 pocketledger  ttys004 · idle · 7f3a1c92 · updated 20m ago
-├─ ✔ Receipt OCR pipeline
-├─ ▸ Expense categorisation
-├─ ⛔ Plaid sandbox keys expired
-└─ ○ Ship to TestFlight
+├─ ✔   Receipt OCR pipeline
+├─ ▸   Expense categorisation
+├─ ⛔ 🔐 Plaid sandbox keys expired
+└─ ○ 🚀 Ship to TestFlight
 ```
 
 `ttytree --watch 2` to refresh faster. Because that tab has no Claude session in
@@ -298,6 +298,8 @@ expensive way to see a tree.
 | `ttytree --path` | tree file path, for hand-editing | 0 |
 | `ttytree --session <id>` | a specific session | 0 |
 | `ttytree --no-color` | plain output, for piping | 0 |
+| `ttytree --no-icons` | state marks only, no category icons | 0 |
+| `ttytree --ascii` | ASCII marks, for terminals without unicode | 0 |
 | `/ttytree` | reconcile with recent activity, then show | < 2k |
 | `/ttytree show` | render only, change nothing | minimal |
 | `/ttytree add <text>` | append an item | small |
@@ -328,13 +330,43 @@ Plain Markdown — edit it by hand any time:
 | `[~]` | in progress | ▸ |
 | `[ ]` | next | ○ |
 | `[!]` | blocked | ⛔ |
+| `[-]` | dropped | · |
 
 The marker carries the state, so don't repeat it in the text — write
 `- [!] staging credentials expired`, not `- [!] BLOCKED: staging credentials expired`.
-| `[-]` | dropped | · |
 
 At most **one `[~]` per level** — that rule is what makes the tree answer *"what
 am I doing right now"* rather than *"what's open"*.
+
+### Icons
+
+The state marks come from the marker. The second icon is **inferred from the
+text** — nothing to write by hand, so trees you wrote last month light up too:
+
+```console
+├─ ✔ 💾 Postgres schema + migrations
+├─ ✔ 🔐 JWT auth middleware
+├─ ▸ 🔌 Webhook delivery
+│  └─ ○ 🧪 contract tests against the sandbox
+└─ ○ 🚀 Deploy to staging
+```
+
+It is a keyword match, not a model — free, instant, and occasionally wrong.
+Matching happens at word starts only, so `portable` isn't a database and
+`transcripts` isn't a script.
+
+| | | | |
+|---|---|---|---|
+| 🚀 deploy | 🐛 bug | 🧪 test | 📝 docs |
+| 🔀 git | 💾 data | 🔌 api | 🔐 auth |
+| 🎨 ui | 📈 perf | 🧹 cleanup | 🔍 research |
+| 📦 packaging | 🔧 config | | |
+
+Turn them off with `ttytree --no-icons`, or permanently with
+`export TTYTREE_ICONS=0`. On a terminal that isn't UTF-8, ttytree drops to
+ASCII marks (`x > o !`) on its own; force it with `--ascii`. The icons are a
+display layer only — `tree.md` and `--json` stay plain text, so anything
+consuming ttytree picks its own.
 
 ---
 

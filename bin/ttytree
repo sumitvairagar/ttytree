@@ -14,7 +14,9 @@
 #   ttytree --statusline    2-3 line summary for Claude Code's statusLine
 #   ttytree --events [n]    raw facts captured by the Stop hook
 #   ttytree --path          print the tree file path (for editing)
-#   ttytree --no-color
+#   ttytree --no-color      plain text
+#   ttytree --no-icons      state marks only, no category icons
+#   ttytree --ascii         ASCII marks too, for terminals without unicode
 
 set -uo pipefail
 # resolve through symlinks — this file is installed as a symlink
@@ -34,6 +36,11 @@ COLOR=1
 MODE=session
 ARG=""
 JSON=0
+# Category icons need a UTF-8 terminal; TTYTREE_ICONS=0/1 overrides the sniff.
+ASCII=0
+tt_unicode_ok || ASCII=1
+ICONS=$(( ASCII ? 0 : 1 ))
+case "${TTYTREE_ICONS:-}" in 0|off|no) ICONS=0 ;; 1|on|yes) ICONS=1 ;; esac
 while [ $# -gt 0 ]; do
   case "$1" in
     --all|-a)      MODE=all ;;
@@ -45,7 +52,11 @@ while [ $# -gt 0 ]; do
     --watch|-w)    MODE=watch; case "${2:-}" in [0-9]*) ARG="$2"; shift ;; esac ;;
     --statusline)  MODE=statusline ;;
     --no-color)    COLOR=0 ;;
-    -h|--help)     sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --icons)       ICONS=1 ;;
+    --no-icons)    ICONS=0 ;;
+    --ascii)       ASCII=1; ICONS=0 ;;
+    -h|--help)     awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$0"
+                   exit 0 ;;
     -*)            printf 'ttytree: unknown option %s\n' "$1" >&2
                    printf "try 'ttytree --help'\n" >&2; exit 2 ;;
     *)             ARG="$1" ;;
@@ -60,17 +71,48 @@ else
   C_DIM=""; C_RST=""; C_B=""; C_GRN=""; C_YEL=""; C_RED=""; C_CYN=""
 fi
 
+if [ "$ASCII" = 1 ]; then
+  G_DONE="x"; G_NOW=">"; G_BLOCK="!"; G_DROP="-"; G_OPEN="o"
+  T_LAST='`- '; T_MID='|- '; T_BAR='|  ' 
+else
+  G_DONE="✔"; G_NOW="▸"; G_BLOCK="⛔"; G_DROP="·"; G_OPEN="○"
+  T_LAST="└─ "; T_MID="├─ "; T_BAR="│  "
+fi
+
 render_tree() {
   local file="$1"
   awk -v dim="$C_DIM" -v rst="$C_RST" -v bold="$C_B" \
-      -v grn="$C_GRN" -v yel="$C_YEL" -v red="$C_RED" '
-    BEGIN { n = 0 }
+      -v grn="$C_GRN" -v yel="$C_YEL" -v red="$C_RED" \
+      -v g_done="$G_DONE" -v g_now="$G_NOW" -v g_block="$G_BLOCK" \
+      -v g_drop="$G_DROP" -v g_open="$G_OPEN" \
+      -v t_last="$T_LAST" -v t_mid="$T_MID" -v t_bar="$T_BAR" \
+      -v icons="$ICONS" -v iconmap="$(tt_icon_rules)" '
+    BEGIN {
+      n = 0
+      nrule = icons ? split(iconmap, rule, ";") : 0
+      for (r = 1; r <= nrule; r++) {
+        eq = index(rule[r], "=")
+        ic[r]  = substr(rule[r], 1, eq - 1)
+        pat[r] = substr(rule[r], eq + 1)
+      }
+    }
+    # What kind of work is this? First rule that matches wins.
+    # Patterns match at a word start only — otherwise "portable" reads as
+    # "table" and "transcripts" as "script". Suffixes are free, so "doc"
+    # catches "docs" and "regress" catches "regression".
+    function cat(t,   r, lt) {
+      if (!icons) return ""
+      lt = " " tolower(t) " "
+      gsub(/[^a-z0-9]+/, " ", lt)
+      for (r = 1; r <= nrule; r++) if (lt ~ (" (" pat[r] ")")) return ic[r] " "
+      return "  "
+    }
     function glyph(m) {
-      if (m == "x") return grn "✔" rst
-      if (m == "~") return yel bold "▸" rst
-      if (m == "!") return red "⛔" rst
-      if (m == "-") return dim "·" rst
-      return "○"
+      if (m == "x") return grn g_done rst
+      if (m == "~") return yel bold g_now rst
+      if (m == "!") return red g_block rst
+      if (m == "-") return dim g_drop rst
+      return g_open
     }
     function paint(m, t) {
       if (m == "x") return dim t rst
@@ -103,9 +145,9 @@ render_tree() {
           if (d[j] == d[i]) { last = 0; break }
         }
         pre = ""
-        for (k = 0; k < d[i]; k++) pre = pre (cont[k] ? dim "│  " rst : "   ")
-        conn = last ? dim "└─ " rst : dim "├─ " rst
-        printf "%s%s%s %s\n", pre, conn, glyph(mk[i]), paint(mk[i], tx[i])
+        for (k = 0; k < d[i]; k++) pre = pre (cont[k] ? dim t_bar rst : "   ")
+        conn = last ? dim t_last rst : dim t_mid rst
+        printf "%s%s%s %s%s\n", pre, conn, glyph(mk[i]), cat(tx[i]), paint(mk[i], tx[i])
         cont[d[i]] = (last ? 0 : 1)
       }
       if (n == 0) printf "%s(tree is empty — run /ttytree to populate it)%s\n", dim, rst
@@ -297,13 +339,13 @@ case "$MODE" in
       echo "No tree yet — run /ttytree in this session first." >&2; exit 1
     fi
     header "$sid"
-    # blockers first: they gate everything under them
-    grep -E '^[ \t]*- \[!\] ' "$tf" 2>/dev/null \
-      | sed -E "s/^[ \t]*- \[!\] /   ${C_RED}⛔ /; s/\$/${C_RST}/"
-    grep -E '^[ \t]*- \[ \] ' "$tf" 2>/dev/null \
-      | sed -E 's/^[ \t]*- \[ \] /   ○ /' \
-      || true
-    if ! grep -qE '^[ \t]*- \[[ !]\] ' "$tf" 2>/dev/null; then
+    # Blockers first: they gate everything under them. Flattened to one level —
+    # the parents aren't shown, so nested connectors would be lying.
+    if grep -qE '^[[:space:]]*- \[[ !]\] ' "$tf" 2>/dev/null; then
+      { grep -E '^[[:space:]]*- \[!\] ' "$tf" 2>/dev/null
+        grep -E '^[[:space:]]*- \[ \] ' "$tf" 2>/dev/null
+      } | sed -e 's/^[[:space:]]*//' | render_tree /dev/stdin
+    else
       printf '   %snothing open — tree is clear%s\n' "$C_DIM" "$C_RST"
     fi
     ;;
@@ -311,8 +353,13 @@ case "$MODE" in
     secs="${ARG:-5}"; case "$secs" in ''|*[!0-9]*) secs=5 ;; esac
     trap 'printf "\033[?25h\n"; exit 0' INT TERM
     printf '\033[?25l'                       # hide cursor
+    # carry the display flags into the child render
+    fwd=()
+    [ "$ASCII" = 1 ] && fwd+=(--ascii)
+    [ "$ICONS" = 0 ] && [ "$ASCII" = 0 ] && fwd+=(--no-icons)
+    [ "$COLOR" = 0 ] && fwd+=(--no-color)
     while :; do
-      out=$( "$0" --all 2>&1 )
+      out=$( "$0" --all "${fwd[@]+"${fwd[@]}"}" 2>&1 )
       printf '\033[H\033[2J'                # home + clear
       printf '%sttytree · %s · refreshing every %ss · ctrl-c to quit%s\n\n' \
         "$C_DIM" "$(date '+%H:%M:%S')" "$secs" "$C_RST"
@@ -332,8 +379,17 @@ case "$MODE" in
     [ -n "$sid" ] || sid=$(tt_resolve_session)
     [ -n "$sid" ] || exit 0
     width="${COLUMNS:-100}"; [ "$width" -lt 40 ] 2>/dev/null && width=100
-    json_one "$sid" | jq -r --argjson w "$((width - 2))" '
+    json_one "$sid" | jq -r --argjson w "$((width - 2))" \
+      --argjson icons "$ICONS" --arg map "$(tt_icon_rules)" '
       def clip($n): if (. | length) > $n then (.[0:$n-1] + "…") else . end;
+      # same word-start matching as the tree renderer
+      def icon:
+        if $icons == 0 or . == null then ""
+        else ((" " + ascii_downcase + " ") | gsub("[^a-z0-9]+"; " ")) as $lt
+          | ($map | split(";") | map(split("=") | { i: .[0], p: .[1] })) as $rules
+          | ([ $rules[] | .p as $re | select($lt | test(" (" + $re + ")")) ] | .[0].i)
+          | if . then . + " " else "" end
+        end;
       . as $s
       | ($s.project // "?")                                        as $proj
       | ($s.current // $s.next[0] // null)                         as $now
@@ -342,7 +398,7 @@ case "$MODE" in
       | ( if $s.has_tree | not then
             "\($proj) · no tree yet — run /ttytree"
           else
-            [ "\($proj) · ▸ \($now // "nothing in progress")" | clip($w),
+            [ "\($proj) · ▸ \($now | icon)\($now // "nothing in progress")" | clip($w),
               ( [ "\($s.summary.done)/\($s.summary.done + $s.summary.in_progress + $s.summary.next) done",
                   (if $stale > 0 then "\($stale) turn(s) unrecorded" else empty end),
                   (if $nxt then "next: \($nxt)" else empty end)
