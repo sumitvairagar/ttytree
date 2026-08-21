@@ -115,8 +115,11 @@ ttytree installer
 ```
 
 Everything is symlinked, so `git pull` updates your install. `./uninstall.sh`
-reverses all of it, including the `settings.json` edit. **Restart Claude Code**
-to pick up the skill and hook.
+reverses all of it, including the `settings.json` edit.
+
+Already-running sessions pick the hook up **live** — verified on a session that
+had been running for over two days. If a session doesn't seem to be collecting,
+restart it.
 
 ---
 

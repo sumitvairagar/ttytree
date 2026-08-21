@@ -266,7 +266,7 @@ case "$MODE" in
       sid=$(basename "$d"); found=1
       show_one "$sid"; echo
     done
-    [ "$found" = 0 ] && echo "No sessions tracked yet."
+    if [ "$found" = 0 ]; then echo "No sessions tracked yet."; fi
     ;;
   path)
     sid="${ARG:-$(tt_resolve_session)}"; [ -n "$sid" ] && tt_tree "$sid" || echo "not in a Claude Code session" >&2
@@ -301,3 +301,5 @@ case "$MODE" in
     show_one "$sid"
     ;;
 esac
+
+exit 0
