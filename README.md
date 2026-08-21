@@ -238,12 +238,60 @@ Facts only — no summaries, no opinions, no model call. That's what makes it fr
 
 ---
 
+### Always on: the statusline
+
+The one surface that's visible in *every* session without running anything.
+`install.sh` wires it up (and leaves an existing statusline alone):
+
+```
+orchard-api · ▸ retry with exponential backoff
+7/11 done · 3 turn(s) unrecorded · next: dead-letter queue
+⛔ waiting on staging credentials
+```
+
+Line one is what you're doing. Line two is how far along, whether the tree has
+fallen behind, and what's next. Line three appears only when something is
+blocked. It costs nothing — the statusline runs the CLI, not the model.
+
+### A live view
+
+Keep one plain terminal open as a control tower:
+
+```console
+$ ttytree --watch
+
+ttytree · 09:14:02 · refreshing every 5s · ctrl-c to quit
+
+orchard-api  ttys000 · idle · 4e1b8a03 · updated 2h ago
+├─ ✔ Postgres schema + migrations
+├─ ▸ Webhook delivery
+│  └─ ○ dead-letter queue
+└─ ○ Deploy to staging
+
+pocketledger  ttys004 · idle · 7f3a1c92 · updated 20m ago
+├─ ✔ Receipt OCR pipeline
+├─ ▸ Expense categorisation
+├─ ⛔ Plaid sandbox keys expired
+└─ ○ Ship to TestFlight
+```
+
+`ttytree --watch 2` to refresh faster. Because that tab has no Claude session in
+it, watching costs nothing at all.
+
+### Running it from inside Claude Code
+
+Type `!ttytree` — the `!` prefix runs a shell command directly. Typing plain
+`ttytree` would send it to Claude as a message, which is the slowest and most
+expensive way to see a tree.
+
 ## Commands
 
 | Command | What it does | Tokens |
 |---|---|---|
 | `ttytree` | this terminal's tree | 0 |
 | `ttytree --all` | every tracked session | 0 |
+| `ttytree --watch [n]` | live view, redraws every n seconds (default 5) | 0 |
+| `ttytree --statusline` | 2–3 line summary for Claude Code's statusLine | 0 |
 | `ttytree --events [n]` | raw facts the hook captured | 0 |
 | `ttytree --next` | only what's actionable right now | 0 |
 | `ttytree --json` | machine-readable output for other tools | 0 |
@@ -361,8 +409,9 @@ Deliberately **not** on this list: a session board, tab colouring, or
 jump-to-terminal. Those are solved well by the tools above; duplicating them
 would trade this project's one advantage for a fight it can't win.
 
-- [ ] **Time-in-state** — a `[~]` that's been in progress for two days should say
-      so. Staleness is the signal you can't get anywhere else.
+- [x] ~~Always-on statusline and a live `--watch` view.~~
+- [ ] **Per-item time-in-state** — the header shows tree age; individual items
+      don't carry timestamps yet, so a `[~]` stuck for two days can't say so.
 - [ ] **Project rollup** — aggregate the session trees of every terminal in one
       repo into a project-level view.
 - [ ] **`--since yesterday`** — a standup-shaped summary across sessions, built

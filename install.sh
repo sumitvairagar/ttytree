@@ -8,6 +8,7 @@
 #   1. the /ttytree skill  -> ~/.claude/skills/ttytree      (symlink)
 #   2. the ttytree CLI     -> ~/.local/bin/ttytree          (symlink)
 #   3. a Stop hook          -> ~/.claude/settings.json        (backed up first)
+#   4. a statusLine         -> ~/.claude/settings.json        (only if unset)
 #
 # Symlinks, so `git pull` in this repo updates your install.
 
@@ -29,7 +30,7 @@ say "repo: $REPO"
 [ "$DRY" = 1 ] && say "(dry run — nothing will be written)"
 
 # --- dependencies ------------------------------------------------------------
-step "1/4  dependencies"
+step "1/5  dependencies"
 missing=0
 for dep in jq awk; do
   if command -v "$dep" >/dev/null 2>&1; then say "✔ $dep"; else say "✘ $dep — required"; missing=1; fi
@@ -41,7 +42,7 @@ fi
 command -v git >/dev/null 2>&1 && say "✔ git (optional, enables branch/dirty info)" || say "· git not found — branch info disabled"
 
 # --- skill -------------------------------------------------------------------
-step "2/4  skill  ->  $CLAUDE_HOME/skills/ttytree"
+step "2/5  skill  ->  $CLAUDE_HOME/skills/ttytree"
 run "mkdir -p '$CLAUDE_HOME/skills'"
 if [ -e "$CLAUDE_HOME/skills/ttytree" ] && [ ! -L "$CLAUDE_HOME/skills/ttytree" ]; then
   say "✘ a real directory already exists there — move it aside first"; exit 1
@@ -50,7 +51,7 @@ run "ln -sfn '$REPO/skills/ttytree' '$CLAUDE_HOME/skills/ttytree'"
 say "✔ /ttytree available in new sessions"
 
 # --- cli ---------------------------------------------------------------------
-step "3/4  cli  ->  $BIN_DIR/ttytree"
+step "3/5  cli  ->  $BIN_DIR/ttytree"
 run "mkdir -p '$BIN_DIR'"
 run "ln -sfn '$REPO/bin/ttytree' '$BIN_DIR/ttytree'"
 case ":$PATH:" in
@@ -60,7 +61,7 @@ case ":$PATH:" in
 esac
 
 # --- stop hook ---------------------------------------------------------------
-step "4/4  Stop hook  ->  $SETTINGS"
+step "4/5  Stop hook  ->  $SETTINGS"
 chmod +x "$HOOK" 2>/dev/null || true
 if [ "$DRY" = 1 ]; then
   say "would register: $HOOK"
@@ -84,13 +85,39 @@ else
   fi
 fi
 
+
+# --- statusline --------------------------------------------------------------
+step "5/5  statusLine  ->  $SETTINGS"
+if [ "$DRY" = 1 ]; then
+  say "would set statusLine (only if you don't already have one)"
+else
+  existing=$(jq -r '.statusLine.command // empty' "$SETTINGS" 2>/dev/null)
+  if [ -n "$existing" ] && ! printf '%s' "$existing" | grep -q ttytree; then
+    say "· you already have a statusLine — left alone"
+    say "  to use ttytree's instead, set it to:"
+    say "    $REPO/bin/ttytree --statusline"
+  else
+    tmp=$(mktemp)
+    jq --arg cmd "$REPO/bin/ttytree --statusline" \
+       '.statusLine = { type: "command", command: $cmd }' "$SETTINGS" > "$tmp"
+    if jq -e . "$tmp" >/dev/null 2>&1; then
+      mv "$tmp" "$SETTINGS"; say "✔ statusLine set"
+    else
+      rm -f "$tmp"; say "✘ could not set statusLine — settings left unchanged"
+    fi
+  fi
+fi
+
 step "done"
 cat <<'TXT'
   Restart Claude Code (or open a new session) to pick up the skill and hook.
 
     ttytree            show this terminal's tree
     ttytree --all      every tracked session
+    ttytree --watch    live view, redraws every few seconds
     /ttytree           update the tree, then show it
+
+  Inside Claude Code, run the CLI with a bang: !ttytree
 
   The hook starts collecting facts on your next turn. Trees appear once you
   run /ttytree at least once in a session.

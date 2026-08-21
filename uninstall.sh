@@ -14,7 +14,8 @@ if [ -f "$SETTINGS" ] && command -v jq >/dev/null 2>&1; then
   cp "$SETTINGS" "$SETTINGS.ttytree-backup.$(date +%Y%m%d%H%M%S)"
   tmp=$(mktemp)
   jq '
-      if .hooks.Stop then
+      (if (.statusLine.command // "") | test("ttytree") then del(.statusLine) else . end)
+    | if .hooks.Stop then
         .hooks.Stop |= map(select( ((.hooks // []) | map(.command // "")
                           | any(test("ttytree-log"))) | not ))
       else . end

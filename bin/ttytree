@@ -10,6 +10,8 @@
 #   ttytree --session <id>  a specific session
 #   ttytree --next          only what's actionable right now
 #   ttytree --json          machine-readable output (see docs/INTEGRATION.md)
+#   ttytree --watch [secs]  live view, redraws every few seconds (default 5)
+#   ttytree --statusline    2-3 line summary for Claude Code's statusLine
 #   ttytree --events [n]    raw facts captured by the Stop hook
 #   ttytree --path          print the tree file path (for editing)
 #   ttytree --no-color
@@ -40,6 +42,8 @@ while [ $# -gt 0 ]; do
     --path|-p)     MODE=path ;;
     --next|-n)     MODE=next ;;
     --json|-j)     JSON=1 ;;
+    --watch|-w)    MODE=watch; case "${2:-}" in [0-9]*) ARG="$2"; shift ;; esac ;;
+    --statusline)  MODE=statusline ;;
     --no-color)    COLOR=0 ;;
     -h|--help)     sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*)            printf 'ttytree: unknown option %s\n' "$1" >&2
@@ -122,8 +126,13 @@ header() {
     cwd=$(tail -1 "$(tt_events "$sid")" 2>/dev/null | jq -r '.cwd // "?"' 2>/dev/null)
   fi
   proj=$(basename "${cwd:-?}")
-  printf '%s%s%s  %s%s · %s · %s%s\n' \
-    "$C_B" "$proj" "$C_RST" "$C_DIM" "$tty" "$status" "${sid:0:8}" "$C_RST"
+  local tf age=""
+  tf=$(tt_tree "$sid")
+  if [ -f "$tf" ]; then
+    age=" · updated $(tt_ago "$(stat -f %m "$tf" 2>/dev/null || stat -c %Y "$tf" 2>/dev/null || echo 0)") ago"
+  fi
+  printf '%s%s%s  %s%s · %s · %s%s%s\n' \
+    "$C_B" "$proj" "$C_RST" "$C_DIM" "$tty" "$status" "${sid:0:8}" "$age" "$C_RST"
 }
 
 footer() {
@@ -297,6 +306,52 @@ case "$MODE" in
     if ! grep -qE '^[ \t]*- \[[ !]\] ' "$tf" 2>/dev/null; then
       printf '   %snothing open — tree is clear%s\n' "$C_DIM" "$C_RST"
     fi
+    ;;
+  watch)
+    secs="${ARG:-5}"; case "$secs" in ''|*[!0-9]*) secs=5 ;; esac
+    trap 'printf "\033[?25h\n"; exit 0' INT TERM
+    printf '\033[?25l'                       # hide cursor
+    while :; do
+      out=$( "$0" --all 2>&1 )
+      printf '\033[H\033[2J'                # home + clear
+      printf '%sttytree · %s · refreshing every %ss · ctrl-c to quit%s\n\n' \
+        "$C_DIM" "$(date '+%H:%M:%S')" "$secs" "$C_RST"
+      printf '%s\n' "$out"
+      sleep "$secs"
+    done
+    ;;
+  statusline)
+    # Claude Code pipes session JSON on stdin; fall back to the process walk.
+    # Never block: stdin may be open but empty (a cron, a bare shell, a test).
+    # Give it at most a second to deliver the JSON, then fall back.
+    payload=""
+    if [ ! -t 0 ]; then
+      IFS= read -r -d '' -t 1 payload 2>/dev/null || true
+    fi
+    sid=$(printf '%s' "$payload" | jq -r '.session_id // empty' 2>/dev/null)
+    [ -n "$sid" ] || sid=$(tt_resolve_session)
+    [ -n "$sid" ] || exit 0
+    width="${COLUMNS:-100}"; [ "$width" -lt 40 ] 2>/dev/null && width=100
+    json_one "$sid" | jq -r --argjson w "$((width - 2))" '
+      def clip($n): if (. | length) > $n then (.[0:$n-1] + "…") else . end;
+      . as $s
+      | ($s.project // "?")                                        as $proj
+      | ($s.current // $s.next[0] // null)                         as $now
+      | ($s.next | map(select(. != $now)) | .[0])                  as $nxt
+      | ($s.since_update.turns // 0)                               as $stale
+      | ( if $s.has_tree | not then
+            "\($proj) · no tree yet — run /ttytree"
+          else
+            [ "\($proj) · ▸ \($now // "nothing in progress")" | clip($w),
+              ( [ "\($s.summary.done)/\($s.summary.done + $s.summary.in_progress + $s.summary.next) done",
+                  (if $stale > 0 then "\($stale) turn(s) unrecorded" else empty end),
+                  (if $nxt then "next: \($nxt)" else empty end)
+                ] | join(" · ") | clip($w) ),
+              ( if ($s.blocked | length) > 0
+                then ("⛔ " + ($s.blocked | join("; "))) | clip($w)
+                else empty end )
+            ] | join("\n")
+          end )'
     ;;
   session)
     sid="${ARG:-$(tt_resolve_session)}"
