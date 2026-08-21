@@ -1,6 +1,6 @@
 ---
 name: ttytree
-description: Show and update a tree of what this Claude Code session is working on — done, in progress, next, blocked. Use when the user runs /ttytree, or asks "what are we doing in this session", "where were we", "what's left", "what's the state of this terminal". Maintains a small per-session tree file; never reads the raw transcript.
+description: Show and update a tree of what this Claude Code session is working on — done, in progress, next, blocked. Always ends by running `ttytree` and showing its rendered output. Use when the user runs /ttytree, or asks "what are we doing in this session", "where were we", "what's left", "what's the state of this terminal". Maintains a small per-session tree file; never reads the raw transcript.
 ---
 
 # ttytree
@@ -80,7 +80,7 @@ Fold the new events into the tree:
 Keep the tree **small and structural**: aim for under 25 lines. It is a map, not
 a log. Roll finished detail up into its parent instead of letting the tree grow.
 
-## Step 4 — write and render
+## Step 4 — write the tree
 
 Write `tree.md` in this format (two spaces per level of nesting):
 
@@ -103,14 +103,26 @@ Markers: `[ ]` next · `[~]` in progress · `[x]` done · `[!]` blocked · `[-]`
 The marker carries the state — write `- [!] staging credentials expired`, never
 `- [!] BLOCKED: staging credentials expired`.
 
-Then render it — do not hand-draw the tree yourself:
+## Step 5 — ALWAYS render. This step is not optional.
+
+The user ran this to **see the tree**. Finishing without showing it fails the
+request, no matter how good your prose summary was.
 
 ```bash
 ttytree
 ```
 
-Show the user that output. Add at most two lines of commentary: what changed
-since last time, and what the obvious next action is.
+Show that output verbatim. Never hand-draw the tree yourself, never replace it
+with a description of what's in it, and never stop at "seeded from context" or
+"folded in N turns" — those are things you say *alongside* the tree, not instead
+of it.
+
+After the tree, add at most two lines: what changed since last time, and the
+obvious next action.
+
+This applies to every invocation, including the first one in a session where you
+just created the tree from context. Especially that one — it's the user's first
+sight of the thing they installed.
 
 ## Arguments
 
