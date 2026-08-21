@@ -88,17 +88,20 @@ Write `tree.md` in this format (two spaces per level of nesting):
 # <project> · <one-line goal for this session>
 <!-- ttytree:meta session=<id> updated=<iso8601> -->
 
-- [x] Screens scaffolded
-- [~] Onboarding flow
-  - [x] intro + permission screens
-  - [~] timer selection screen
-    - [ ] persist choice to storage
-  - [ ] analytics events
-- [!] BLOCKED: monthly spend limit hit
-- [ ] Ship to TestFlight
+- [x] JWT auth middleware
+- [~] Webhook delivery
+  - [x] signing + replay protection
+  - [~] retry with exponential backoff
+    - [ ] dead-letter queue
+  - [ ] delivery metrics
+- [!] waiting on staging credentials
+- [ ] Deploy to staging
 ```
 
 Markers: `[ ]` next · `[~]` in progress · `[x]` done · `[!]` blocked · `[-]` dropped.
+
+The marker carries the state — write `- [!] staging credentials expired`, never
+`- [!] BLOCKED: staging credentials expired`.
 
 Then render it — do not hand-draw the tree yourself:
 

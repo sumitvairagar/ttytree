@@ -38,28 +38,28 @@ work.
   "generated_at": 1787310870,
   "sessions": [
     {
-      "session_id": "7f3a1c92-…",  // matches Claude Code's own session id
-      "name": "pocketledger-71", // Claude Code's derived session name
-      "cwd": "/Users/you/code/mobile/pocketledger",
-      "project": "pocketledger", // basename of cwd, for convenience
-      "tty": "ttys004",
-      "pid": 21058,
+      "session_id": "4e1b8a03-…",  // matches Claude Code's own session id
+      "name": "orchard-api-12",    // Claude Code's derived session name
+      "cwd": "/Users/you/code/orchard-api",
+      "project": "orchard-api",    // basename of cwd, for convenience
+      "tty": "ttys000",
+      "pid": 48213,
       "session_status": "idle",    // from Claude Code: busy | idle | gone
       "has_tree": true,            // false = hook running, no tree written yet
 
       "tree_updated": 1787309434,  // epoch seconds; 0 if no tree
 
-      "current": "timer selection screen",         // the active item, or null
-      "blocked": ["monthly spend limit hit"],      // may be empty
-      "next":    ["persist choice to storage"],    // may be empty
+      "current": "retry with exponential backoff",   // the active item, or null
+      "blocked": ["waiting on staging credentials"], // may be empty
+      "next":    ["dead-letter queue"],              // may be empty
 
       "summary": { "done": 5, "in_progress": 1, "next": 3,
                    "blocked": 1, "dropped": 0 },
 
       "items": [                   // the full tree, in document order
-        { "depth": 0, "state": "done",        "text": "Screens scaffolded" },
-        { "depth": 0, "state": "in_progress", "text": "Onboarding flow" },
-        { "depth": 1, "state": "next",        "text": "persist choice" }
+        { "depth": 0, "state": "done",        "text": "JWT auth middleware" },
+        { "depth": 0, "state": "in_progress", "text": "Webhook delivery" },
+        { "depth": 1, "state": "next",        "text": "dead-letter queue" }
       ],
 
       "since_update": {            // activity the tree hasn't absorbed yet
@@ -71,6 +71,11 @@ work.
 ```
 
 `state` is one of `done`, `in_progress`, `next`, `blocked`, `dropped`.
+
+The convenience fields (`current`, `blocked`, `next`) have a redundant leading
+state word stripped, so `- [!] BLOCKED: keys expired` surfaces as
+`"blocked": ["keys expired"]`. `items[].text` is always verbatim from the file —
+use it when you need exactly what the user wrote.
 
 ### Stability
 
@@ -96,7 +101,7 @@ Most integrations want three fields and can ignore the rest:
 A minimal sidebar row:
 
 ```
-pocketledger  ▸ timer selection screen        5/9  ⛔1
+orchard-api  ▸ retry with exponential backoff     5/9  ⛔1
 ```
 
 Drawing the full tree from `items` is a straight indentation walk — `depth` is
@@ -120,9 +125,9 @@ reconciles it on the assumption that edits are intentional.
 `events.jsonl` entries look like:
 
 ```json
-{"ts":1787309434,"tools":{"Edit":6,"Bash":11},"files":["src/Scrub.tsx"],
- "cmds":["npm test"],"prompt":"make the scrubber accessible","reply":"…",
- "dirty":4,"branch":"main","cwd":"/Users/you/code/app"}
+{"ts":1787309434,"tools":{"Edit":6,"Bash":11},"files":["internal/webhook/retry.go"],
+ "cmds":["go test ./internal/webhook/..."],"prompt":"add backoff with jitter",
+ "reply":"…","dirty":4,"branch":"main","cwd":"/Users/you/code/orchard-api"}
 ```
 
 A `{"ts":…,"cold_start":true,"cwd":…}` entry marks the point ttytree started

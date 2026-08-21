@@ -41,7 +41,9 @@ while [ $# -gt 0 ]; do
     --next|-n)     MODE=next ;;
     --json|-j)     JSON=1 ;;
     --no-color)    COLOR=0 ;;
-    -h|--help)     sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)     sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -*)            printf 'ttytree: unknown option %s\n' "$1" >&2
+                   printf "try 'ttytree --help'\n" >&2; exit 2 ;;
     *)             ARG="$1" ;;
   esac
   shift
@@ -207,6 +209,9 @@ json_one() {
   printf '%s' "$meta" | jq -c \
     --argjson items "$items" --argjson stale "$stale" --argjson updated "${tree_mt:-0}" \
     --arg has_tree "$([ -f "$tf" ] && echo true || echo false)" '
+    # convenience fields drop a redundant state prefix ("BLOCKED: x" -> "x");
+    # items[].text stays verbatim.
+    def unprefix: sub("^[[:space:]]*(BLOCKED|Blocked|blocked|DROPPED|Dropped|dropped|TODO|Todo|NEXT|Next)[[:space:]]*[:-][[:space:]]*"; "");
     {
       session_id: .sessionId,
       name:       .name,
@@ -225,9 +230,9 @@ json_one() {
         blocked:     ([ $items[] | select(.state == "blocked") ]     | length),
         dropped:     ([ $items[] | select(.state == "dropped") ]     | length)
       },
-      current: ([ $items[] | select(.state == "in_progress") | .text ] | last),
-      blocked: [ $items[] | select(.state == "blocked") | .text ],
-      next:    [ $items[] | select(.state == "next") | .text ],
+      current: ([ $items[] | select(.state == "in_progress") | .text | unprefix ] | last),
+      blocked: [ $items[] | select(.state == "blocked") | .text | unprefix ],
+      next:    [ $items[] | select(.state == "next") | .text | unprefix ],
       since_update: $stale
     }'
 }

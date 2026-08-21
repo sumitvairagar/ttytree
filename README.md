@@ -8,13 +8,13 @@ up to date.
 $ ttytree
 
 pocketledger  ttys004 · idle · 7f3a1c92
-├─ ✔ Screens scaffolded
-├─ ▸ Onboarding flow
-│  ├─ ✔ intro + permission screens
-│  ├─ ▸ timer selection screen
-│  │  └─ ○ persist choice to storage
-│  └─ ○ analytics events
-├─ ⛔ BLOCKED: monthly spend limit hit
+├─ ✔ Receipt OCR pipeline
+├─ ▸ Expense categorisation
+│  ├─ ✔ rules engine
+│  ├─ ▸ merchant matching
+│  │  └─ ○ collapse duplicate merchants
+│  └─ ○ user-defined categories
+├─ ⛔ Plaid sandbox keys expired
 └─ ○ Ship to TestFlight
 
    3 turns, 5 files touched since this tree was updated
@@ -36,17 +36,19 @@ one a long-lived Claude session:
 $ ps -eo pid,tty,command | grep claude
 
 ttys000   claude --resume 4e1b8a03…    orchard-api      running 2d 5h
-ttys001   claude --resume              tidepool         running 3d 23h
-ttys002   claude                       warehouse-etl    running 21h
+ttys001   claude                       tidepool         running 3d 23h
+ttys002   claude --resume              warehouse-etl    running 21h
 ttys003   claude                       lumen-docs       running 18h
-ttys004   claude --resume              pocketledger     running 3d 3h
+ttys004   claude --resume 7f3a1c92…    pocketledger     running 3d 3h
 ttys006   claude                       dotfiles         running 4h
 ttys008   claude                       tidepool         running 2d
 ttys009   claude --resume              orchard-api      running 2d
 ```
 
-Three of those had been silently dead for 50 minutes — two on API errors, one on
-a spend limit — and nothing in the terminal said so.
+Three of those had been silently dead for the better part of an hour — two on API
+errors, one on a rate limit — and nothing in the terminal said so. Note also that
+`tidepool` and `orchard-api` each own **two** tabs; the thing you switch between
+is a terminal, not a project.
 
 Claude Code already stores plenty: a full transcript per session, and a registry
 with each session's pid, cwd, name and busy/idle status. What it does **not**
@@ -132,17 +134,17 @@ You switch to a tab you left before lunch. Instead of asking Claude anything:
 ```console
 $ ttytree
 
-lumen-docs  ttys003 · idle · 5a71c3d9
-├─ ✔ Supabase schema + RLS policies
-├─ ✔ Auth flow (magic link)
-├─ ▸ Audio player
-│  ├─ ✔ waveform component
-│  ├─ ▸ scrubbing + seek
-│  │  ├─ ✔ pointer events
-│  │  └─ ○ keyboard a11y
-│  └─ ○ playback speed control
-├─ ○ Offline caching
-└─ ○ Deploy preview to Vercel
+orchard-api  ttys000 · idle · 4e1b8a03
+├─ ✔ Postgres schema + migrations
+├─ ✔ JWT auth middleware
+├─ ▸ Webhook delivery
+│  ├─ ✔ signing + replay protection
+│  ├─ ▸ retry with exponential backoff
+│  │  ├─ ✔ jitter
+│  │  └─ ○ dead-letter queue
+│  └─ ○ delivery metrics
+├─ ○ Per-tenant rate limiting
+└─ ○ Deploy to staging
 
    7 turns, 12 file(s) touched since this tree was updated — run /ttytree to fold them in
 ```
@@ -157,23 +159,32 @@ facts, not 144k of transcript.
 $ ttytree --all
 
 orchard-api  ttys000 · idle · 4e1b8a03
-├─ ✔ Terraform modules split per environment
-├─ ▸ GitLab runner autoscaling
-│  └─ ○ verify spot instance drain
-└─ ○ Write the runbook
+├─ ✔ Postgres schema + migrations
+├─ ✔ JWT auth middleware
+├─ ▸ Webhook delivery
+│  ├─ ✔ signing + replay protection
+│  ├─ ▸ retry with exponential backoff
+│  │  ├─ ✔ jitter
+│  │  └─ ○ dead-letter queue
+│  └─ ○ delivery metrics
+├─ ○ Per-tenant rate limiting
+└─ ○ Deploy to staging
 
 pocketledger  ttys004 · idle · 7f3a1c92
-├─ ✔ Screens scaffolded
-├─ ▸ Onboarding flow
-│  └─ ○ persist choice to storage
-├─ ⛔ BLOCKED: monthly spend limit hit
+├─ ✔ Receipt OCR pipeline
+├─ ▸ Expense categorisation
+│  ├─ ✔ rules engine
+│  ├─ ▸ merchant matching
+│  │  └─ ○ collapse duplicate merchants
+│  └─ ○ user-defined categories
+├─ ⛔ Plaid sandbox keys expired
 └─ ○ Ship to TestFlight
 
-orchard-api  ttys009 · idle · 2b9d51e7
-├─ ✔ Radar chart renderer
-├─ ▸ Shorts pipeline
-│  └─ ○ caption burn-in
-└─ ⛔ BLOCKED: API error — session stalled 50m ago
+warehouse-etl  ttys002 · idle · c8f04a17
+├─ ✔ Nightly sync job
+├─ ▸ Backfill 2024 orders
+│  └─ ○ verify row counts against source
+└─ ⛔ API error — session stalled 50m ago
 ```
 
 Two blocked terminals, visible in one glance, without entering either tab.
@@ -183,20 +194,20 @@ Two blocked terminals, visible in one glance, without entering either tab.
 ```
 > /ttytree
 
-  Folded in 7 turns. Scrubbing is done — you finished pointer events and the
-  seek handler; keyboard a11y is still open. Next obvious step is playback
-  speed control.
+  Folded in 7 turns. Backoff is done — jitter and the dead-letter queue both
+  landed, and the retry tests pass. Delivery metrics is now the open thread;
+  nothing is blocked.
 
-lumen-docs  ttys003 · busy · 5a71c3d9
-├─ ✔ Supabase schema + RLS policies
-├─ ✔ Auth flow (magic link)
-├─ ▸ Audio player
-│  ├─ ✔ waveform component
-│  ├─ ✔ scrubbing + seek
-│  ├─ ▸ keyboard a11y
-│  └─ ○ playback speed control
-├─ ○ Offline caching
-└─ ○ Deploy preview to Vercel
+orchard-api  ttys000 · busy · 4e1b8a03
+├─ ✔ Postgres schema + migrations
+├─ ✔ JWT auth middleware
+├─ ▸ Webhook delivery
+│  ├─ ✔ signing + replay protection
+│  ├─ ✔ retry with exponential backoff
+│  ├─ ▸ delivery metrics
+│  └─ ○ alert on repeated failures
+├─ ○ Per-tenant rate limiting
+└─ ○ Deploy to staging
 ```
 
 ### Quick edits without a model
@@ -218,9 +229,9 @@ $ $EDITOR "$(ttytree --path)"          # it's plain Markdown, edit freely
 ```console
 $ ttytree --events 3
 
-{"ts":1787309434,"tools":{"Edit":6,"Bash":11,"Read":4},"files":["src/player/Scrub.tsx","src/player/index.ts"],"dirty":4,"branch":"main","prompt":"make the scrubber keyboard accessible"}
-{"ts":1787309981,"tools":{"Bash":3},"files":[],"dirty":4,"branch":"main","prompt":"run the tests"}
-{"ts":1787310402,"tools":{"Edit":2,"Bash":5},"files":["src/player/Scrub.test.tsx"],"dirty":6,"branch":"main","prompt":"fix the failing case"}
+{"ts":1787309434,"tools":{"Edit":6,"Bash":11,"Read":4},"files":["internal/webhook/retry.go","internal/webhook/queue.go"],"dirty":4,"branch":"main","prompt":"add exponential backoff with jitter"}
+{"ts":1787309981,"tools":{"Bash":3},"files":[],"dirty":4,"branch":"main","prompt":"run the retry tests"}
+{"ts":1787310402,"tools":{"Edit":2,"Bash":5},"files":["internal/webhook/retry_test.go"],"dirty":6,"branch":"main","prompt":"fix the flaky backoff case"}
 ```
 
 Facts only — no summaries, no opinions, no model call. That's what makes it free.
@@ -251,16 +262,16 @@ Facts only — no summaries, no opinions, no model call. That's what makes it fr
 Plain Markdown — edit it by hand any time:
 
 ```markdown
-# lumen-docs · ship the audio player
-<!-- ttytree:meta session=5a71c3d9 updated=2026-08-21 -->
+# orchard-api · ship webhook delivery
+<!-- ttytree:meta session=4e1b8a03 updated=2026-08-21 -->
 
-- [x] Auth flow (magic link)
-- [~] Audio player
-  - [x] waveform component
-  - [~] scrubbing + seek
-    - [ ] keyboard a11y
-- [!] BLOCKED: waiting on design review
-- [-] Dropped: custom codec support
+- [x] JWT auth middleware
+- [~] Webhook delivery
+  - [x] signing + replay protection
+  - [~] retry with exponential backoff
+    - [ ] dead-letter queue
+- [!] waiting on staging credentials
+- [-] gRPC transport
 ```
 
 | Marker | Means | Renders |
@@ -269,6 +280,9 @@ Plain Markdown — edit it by hand any time:
 | `[~]` | in progress | ▸ |
 | `[ ]` | next | ○ |
 | `[!]` | blocked | ⛔ |
+
+The marker carries the state, so don't repeat it in the text — write
+`- [!] staging credentials expired`, not `- [!] BLOCKED: staging credentials expired`.
 | `[-]` | dropped | · |
 
 At most **one `[~]` per level** — that rule is what makes the tree answer *"what
