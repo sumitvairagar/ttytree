@@ -81,7 +81,15 @@ Roughly **575× less** — and it stays flat as the session grows, because:
 - The **`ttytree` CLI** renders with **zero tokens**. If you only want to look,
   no model is involved at all.
 
-Facts get captured for free. Interpretation happens only when you ask.
+Facts get captured for free. Interpretation happens only when you ask — the
+hook never writes the tree itself, because turning "6 edits, 11 commands" into
+"▸ retry with exponential backoff" needs a model.
+
+The tree lives on disk, outside the context window, so `/compact` and
+`claude --resume` don't touch it. Compaction appends to the same transcript and
+keeps the same session id, so the byte offset stays valid and the next turn is
+still O(new bytes). After a compact is exactly when `/ttytree` is worth the most:
+the model lost its context, the tree didn't.
 
 ---
 
@@ -433,6 +441,14 @@ All local files. Nothing is sent anywhere.
   Parsing paths out of arbitrary shell is fragile, so it isn't attempted.
 - **Trees appear only after the first `/ttytree`** in a session. The hook starts
   collecting immediately, but nothing renders until there's a tree to render.
+- **The tree does not update itself.** The hook records facts every turn for
+  free; only `/ttytree` folds them into the tree. A terminal you never run it in
+  will collect events and report `N turn(s) unrecorded` — the tree stays where
+  you left it. That's the trade for zero background token spend.
+- **Big trees stay fast but stop being useful.** Rendering 200 lines takes
+  ~0.05s and costs the skill ~2k tokens, so nothing breaks — but a tree that
+  long has stopped answering "what am I doing now". Keep it under ~25 lines;
+  let finished branches collapse into one done item.
 - **macOS and Linux only.** Depends on `ps`, `stat`, and a POSIX-ish shell.
 
 ## Roadmap
