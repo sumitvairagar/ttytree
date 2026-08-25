@@ -524,9 +524,10 @@ case "$MODE" in
     if [ "$MODE" = serve ]; then
       port="${ARG:-7777}"; case "$port" in ''|*[!0-9]*) port=7777 ;; esac
       exec python3 "$dash" --serve "$port" --cli "$SELF_DIR/ttytree" \
-                   --icon-map "$(tt_icon_rules)"
+                   --icon-map "$(tt_icon_rules)" --self "$(tt_resolve_session)"
     fi
-    "$0" --json --all | python3 "$dash" --once --icon-map "$(tt_icon_rules)"
+    "$0" --json --all | python3 "$dash" --once --icon-map "$(tt_icon_rules)" \
+                                       --self "$(tt_resolve_session)"
     ;;
   session)
     if [ -n "$ARG" ]; then

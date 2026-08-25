@@ -301,16 +301,23 @@ ttytree dashboard  http://localhost:7777
   live · localhost only · ctrl-c to stop
 ```
 
-It opens with **where you are** — the terminal that's active, its current item
-in large type, what comes after it, and how far behind the tree has fallen. Next
-to it, **needs you**: every blocker across every terminal, so nothing sits stuck
-without you knowing.
+Down the left is every terminal, worst first: a status dot, the project, how
+far along it is, and how many turns its tree hasn't absorbed. The terminal you
+started the server from is marked `here`. Click one, or press <kbd>J</kbd> /
+<kbd>K</kbd> to walk the list, <kbd>1</kbd>–<kbd>9</kbd> to jump, <kbd>D</kbd>
+for the dashboard.
 
-Below that, one card per terminal in the same order the board uses. Each card
-leads with *now*, then blockers, then the next few items — the full tree is one
-disclosure away rather than dumped on you.
+**Dashboard** is the overview. Four numbers across the top — blockers, items
+open, items done, turns unrecorded — then **needs you**, every blocker across
+every terminal with the project it belongs to. Click a blocker to land in that
+terminal's tree. Below it, one row per terminal: what it is doing right now,
+its progress, and how stale its tree is.
 
-Top right: **Auto / Light / Dark** and **A− / A+** for text size. Auto follows
+**A terminal** is the detail view: the path, tty and pid, what it is blocked on,
+what it is working on, and then the whole tree as a document — a state glyph per
+line, indentation that holds, done items receding so the open ones stand out.
+
+Bottom left: **Auto / Light / Dark** and **A− / A+** for text size. Auto follows
 your system; an explicit choice wins over it. Both are remembered in that
 browser, so the page comes back the way you left it.
 
