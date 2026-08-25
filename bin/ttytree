@@ -324,6 +324,7 @@ board() {
   emit_json $sids | jq -r \
     --argjson w "$w" --argjson ascii "$ASCII" --argjson icons "$ICONS" \
     --arg map "$(tt_icon_rules)" \
+    --arg me "$(tt_resolve_session)" \
     --arg dim "$C_DIM" --arg rst "$C_RST" --arg b "$C_B" \
     --arg grn "$C_GRN" --arg yel "$C_YEL" --arg red "$C_RED" --arg cyn "$C_CYN" '
     def clip($n): if $n < 6 then "" elif length > $n then (.[0:$n-1] + "…") else . end;
@@ -343,7 +344,8 @@ board() {
       end;
 
     [ .sessions[]
-      | { proj:  (.project // "?"),
+      | { sid:   .session_id,
+          proj:  (.project // "?"),
           st:    .session_status,
           nblk:  (.blocked | length),
           cur:   (if (.blocked | length) > 0 then .blocked[0]
@@ -362,9 +364,11 @@ board() {
     | ($r | map(if .has then "\(.done)/\(.total)" else "" end | length) | max // 0) as $cw
     | ($r | map(if .has then (.upd | ago) else "" end | length) | max // 0)         as $aw
     | ($r | map(if .stale > 0 then "+\(.stale)" else "" end | length) | max // 0)   as $sw
-    | (2 + $pw + 2 + $cw + 2 + $aw + (if $sw > 0 then $sw + 2 else 0 end) + 2) as $lead
+    | (2 + 2 + $pw + 2 + $cw + 2 + $aw + (if $sw > 0 then $sw + 2 else 0 end) + 2) as $lead
 
     | ( [ "\($r | length) session\(if ($r|length) == 1 then "" else "s" end)",
+          (if ($me != "" and ([ $r[] | select(.sid == $me) ] | length) > 0)
+             then "you are in \([ $r[] | select(.sid == $me) ] | .[0].proj)" else empty end),
           (if ([ $r[] | select(.nblk > 0) ] | length) > 0
              then "\([ $r[] | select(.nblk > 0) ] | length) blocked" else empty end),
           (if ([ $r[] | select(.stale > 0) ] | length) > 0
@@ -387,7 +391,8 @@ board() {
                    + (.cur | icon) + (.cur | clip($w - $lead)) )
                  | if $nb > 0 then $red + . + $rst else . end
             end ) as $txt
-        | $g + " " + $b + (.proj | clip($pw) | pad($pw)) + $rst
+        | (if .sid == $me then $yel + "› " + $rst else "  " end) as $here
+        | $here + $g + " " + $b + (.proj | clip($pw) | pad($pw)) + $rst
           + "  " + $dim + ($cnt | pad($cw)) + "  " + ($age | pad($aw)) + $rst
           + (if $sw > 0 then "  " + $yel + ($stl | pad($sw)) + $rst else "" end)
           + "  " + $txt ),

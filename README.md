@@ -169,18 +169,19 @@ top, then busy, then whatever you touched most recently:
 ```console
 $ ttytree --all
 
-ttytree · 4 sessions · 2 blocked · 4 with unrecorded turns
+ttytree · 4 sessions · you are in orchard-web · 2 blocked · 4 with unrecorded turns
 
-⛔ orchard-api      9/14   7m   +1   staging credentials expired
-⛔ pocketledger     12/18  36m  +2   🚀 pricing still unset in App Store Connect
-● orchard-web      14/16  3d   +11  ▸ checkout redesign
-○ warehouse-etl    16/27  3d   +4   ▸ 💾 backfill 2024 orders
+  ⛔ orchard-api      9/14   7m   +1   staging credentials expired
+  ⛔ pocketledger     12/18  36m  +2   🚀 pricing still unset in App Store Connect
+› ● orchard-web      14/16  3d   +11  ▸ checkout redesign
+  ○ warehouse-etl    16/27  3d   +4   ▸ 💾 backfill 2024 orders
 
    ttytree <name>  one tree in full · --all --full  every tree · --serve  browser
 ```
 
-`+11` means eleven turns happened that the tree hasn't absorbed yet. Four
-sessions is 6 lines instead of 93; eight terminals still fits on one screen.
+`›` is the terminal you're typing in. `+11` means eleven turns happened that the
+tree hasn't absorbed yet. Four sessions is 6 lines instead of 93; eight
+terminals still fits on one screen.
 
 Then drill in by name — no session ids to copy:
 
@@ -300,10 +301,21 @@ ttytree dashboard  http://localhost:7777
   live · localhost only · ctrl-c to stop
 ```
 
-One card per terminal, sorted the same way the board is: progress bar, what's
-active, blockers called out in red, and completed items folded behind a
-disclosure. It binds to `127.0.0.1` only — your session names never leave the
-machine. Needs `python3` (the terminal views don't).
+It opens with **where you are** — the terminal that's active, its current item
+in large type, what comes after it, and how far behind the tree has fallen. Next
+to it, **needs you**: every blocker across every terminal, so nothing sits stuck
+without you knowing.
+
+Below that, one card per terminal in the same order the board uses. Each card
+leads with *now*, then blockers, then the next few items — the full tree is one
+disclosure away rather than dumped on you.
+
+Top right: **Auto / Light / Dark** and **A− / A+** for text size. Auto follows
+your system; an explicit choice wins over it. Both are remembered in that
+browser, so the page comes back the way you left it.
+
+It binds to `127.0.0.1` only — your session names never leave the machine.
+Needs `python3` (the terminal views don't).
 
 `ttytree --html > board.html` writes the same page as a static snapshot.
 
