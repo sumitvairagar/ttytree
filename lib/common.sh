@@ -88,3 +88,41 @@ tt_icon_rules() {
 '📦=package|bundle|npm|yarn|docker|dependenc|upgrade|version;'\
 '🔧=config|setup|install|env|tooling|script|flag|alert|log'
 }
+
+# Project name for a session — the registry knows it while the session is
+# alive, the last event remembers it afterwards.
+tt_project_of() {
+  local sid="$1" cwd
+  cwd=$(tt_session_meta "$sid" 2>/dev/null | jq -r '.cwd // empty' 2>/dev/null)
+  [ -n "$cwd" ] || cwd=$(tail -1 "$(tt_events "$sid")" 2>/dev/null | jq -r '.cwd // empty' 2>/dev/null)
+  [ -n "$cwd" ] && basename "$cwd"
+}
+
+# All tracked session ids, newest tree first.
+tt_all_sessions() {
+  local d
+  for d in "$TTYTREE_HOME"/*/; do
+    [ -d "$d" ] || continue
+    printf '%s\t%s\n' "$(stat -f %m "$d/tree.md" 2>/dev/null || stat -c %Y "$d/tree.md" 2>/dev/null || echo 0)" "$(basename "$d")"
+  done | sort -rn | cut -f2
+}
+
+# Resolve a user-typed target to a session id: exact id, id prefix, exact
+# project name, then project prefix. Newest tree wins a tie.
+tt_match_session() {
+  local want="$1" sid proj lw
+  [ -n "$want" ] || return 1
+  lw=$(printf '%s' "$want" | tr '[:upper:]' '[:lower:]')
+  for sid in $(tt_all_sessions); do
+    case "$sid" in "$want"*) printf '%s' "$sid"; return 0 ;; esac
+  done
+  for sid in $(tt_all_sessions); do
+    proj=$(tt_project_of "$sid" | tr '[:upper:]' '[:lower:]')
+    [ "$proj" = "$lw" ] && { printf '%s' "$sid"; return 0; }
+  done
+  for sid in $(tt_all_sessions); do
+    proj=$(tt_project_of "$sid" | tr '[:upper:]' '[:lower:]')
+    case "$proj" in "$lw"*) printf '%s' "$sid"; return 0 ;; esac
+  done
+  return 1
+}

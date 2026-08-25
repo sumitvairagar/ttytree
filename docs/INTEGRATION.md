@@ -81,6 +81,16 @@ Text never carries icons. The CLI infers a category icon (🐛, 🧪, 🚀 …) 
 text at render time; the JSON stays plain so you can map states to your own
 glyph set — or match on the text yourself.
 
+### Who already reads it
+
+`ttytree --all` (the terminal board) and `ttytree --serve` (the browser
+dashboard) are both plain consumers of this JSON — they call the CLI exactly the
+way you would. If the contract is enough to build the shipped views on, it's
+enough to build yours.
+
+`ttytree --icon-map` prints the category-icon rules (`icon=regex;…`) if you want
+the same glyphs the CLI uses.
+
 ### Stability
 
 - Fields are **added**, never removed or repurposed, within a `version`.

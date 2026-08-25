@@ -6,7 +6,11 @@
 # what displays it, and you can run it any time from any terminal.
 #
 #   ttytree                 this terminal's session
-#   ttytree --all           every session that has a tree
+#   ttytree <name>          a session by project name
+#   ttytree --all           one line per session (the board)
+#   ttytree --all --full    every tree in full
+#   ttytree --serve [port]  live dashboard in the browser (default 7777)
+#   ttytree --html          write the dashboard to stdout
 #   ttytree --session <id>  a specific session
 #   ttytree --next          only what's actionable right now
 #   ttytree --json          machine-readable output (see docs/INTEGRATION.md)
@@ -36,6 +40,7 @@ COLOR=1
 MODE=session
 ARG=""
 JSON=0
+FULL=0
 # Category icons need a UTF-8 terminal; TTYTREE_ICONS=0/1 overrides the sniff.
 ASCII=0
 tt_unicode_ok || ASCII=1
@@ -44,6 +49,9 @@ case "${TTYTREE_ICONS:-}" in 0|off|no) ICONS=0 ;; 1|on|yes) ICONS=1 ;; esac
 while [ $# -gt 0 ]; do
   case "$1" in
     --all|-a)      MODE=all ;;
+    --full|-f)     FULL=1 ;;
+    --serve)       MODE=serve; case "${2:-}" in [0-9]*) ARG="$2"; shift ;; esac ;;
+    --html)        MODE=html ;;
     --session|-s)  MODE=session; ARG="${2:-}"; shift ;;
     --events|-e)   MODE=events; case "${2:-}" in [0-9]*) ARG="$2"; shift ;; esac ;;
     --path|-p)     MODE=path ;;
@@ -51,6 +59,7 @@ while [ $# -gt 0 ]; do
     --json|-j)     JSON=1 ;;
     --watch|-w)    MODE=watch; case "${2:-}" in [0-9]*) ARG="$2"; shift ;; esac ;;
     --statusline)  MODE=statusline ;;
+    --icon-map)    tt_icon_rules; echo; exit 0 ;;
     --no-color)    COLOR=0 ;;
     --icons)       ICONS=1 ;;
     --no-icons)    ICONS=0 ;;
@@ -299,6 +308,94 @@ emit_json() {
   printf ']}\n'
 }
 
+# One line per session. Reads the same --json contract the dashboard does, so
+# the two can never disagree about what a terminal is doing.
+board() {
+  local sids w
+  sids=$(tt_all_sessions)
+  if [ -z "$sids" ]; then echo "No sessions tracked yet."; return 0; fi
+  w="${COLUMNS:-0}"
+  case "$w" in ''|*[!0-9]*) w=0 ;; esac
+  [ "$w" -ge 60 ] || w=$(tput cols 2>/dev/null || echo 100)
+  case "$w" in ''|*[!0-9]*) w=100 ;; esac
+  [ "$w" -ge 60 ] || w=100
+
+  # shellcheck disable=SC2086
+  emit_json $sids | jq -r \
+    --argjson w "$w" --argjson ascii "$ASCII" --argjson icons "$ICONS" \
+    --arg map "$(tt_icon_rules)" \
+    --arg dim "$C_DIM" --arg rst "$C_RST" --arg b "$C_B" \
+    --arg grn "$C_GRN" --arg yel "$C_YEL" --arg red "$C_RED" --arg cyn "$C_CYN" '
+    def clip($n): if $n < 6 then "" elif length > $n then (.[0:$n-1] + "…") else . end;
+    def pad($n): . + (" " * ($n - length));
+    def ago: (now - .) as $d
+      | if . == 0 then "-"
+        elif $d < 60    then "\($d | floor)s"
+        elif $d < 3600  then "\(($d / 60) | floor)m"
+        elif $d < 86400 then "\(($d / 3600) | floor)h"
+        else                 "\(($d / 86400) | floor)d" end;
+    def icon:
+      if $icons == 0 or . == null then ""
+      else ((" " + ascii_downcase + " ") | gsub("[^a-z0-9]+"; " ")) as $lt
+        | ($map | split(";") | map(split("=") | { i: .[0], p: .[1] })) as $rules
+        | ([ $rules[] | .p as $re | select($lt | test(" (" + $re + ")")) ] | .[0].i)
+        | if . then . + " " else "" end
+      end;
+
+    [ .sessions[]
+      | { proj:  (.project // "?"),
+          st:    .session_status,
+          nblk:  (.blocked | length),
+          cur:   (if (.blocked | length) > 0 then .blocked[0]
+                  else (.current // .next[0]) end),
+          live:  (.current != null),
+          done:  .summary.done,
+          total: (.summary.done + .summary.in_progress + .summary.next),
+          upd:   .tree_updated,
+          stale: (.since_update.turns // 0),
+          has:   .has_tree }
+    ]
+    | sort_by( (if .nblk > 0 then 0 elif .st == "busy" then 1
+                elif .st == "idle" then 2 else 3 end), (- .upd) ) as $r
+
+    | ([ ($r | map(.proj | length) | max // 4), 24 ] | min)                as $pw
+    | ($r | map(if .has then "\(.done)/\(.total)" else "" end | length) | max // 0) as $cw
+    | ($r | map(if .has then (.upd | ago) else "" end | length) | max // 0)         as $aw
+    | ($r | map(if .stale > 0 then "+\(.stale)" else "" end | length) | max // 0)   as $sw
+    | (2 + $pw + 2 + $cw + 2 + $aw + (if $sw > 0 then $sw + 2 else 0 end) + 2) as $lead
+
+    | ( [ "\($r | length) session\(if ($r|length) == 1 then "" else "s" end)",
+          (if ([ $r[] | select(.nblk > 0) ] | length) > 0
+             then "\([ $r[] | select(.nblk > 0) ] | length) blocked" else empty end),
+          (if ([ $r[] | select(.stale > 0) ] | length) > 0
+             then "\([ $r[] | select(.stale > 0) ] | length) with unrecorded turns" else empty end)
+        ] | join(" · ") ) as $head
+    | ( $dim + "ttytree · " + $head + $rst ), "",
+
+      ( $r[]
+        | .nblk as $nb
+        | ( if .nblk > 0    then $red + (if $ascii == 1 then "!" else "⛔" end) + $rst
+            elif .st == "busy" then $grn + (if $ascii == 1 then "*" else "●" end) + $rst
+            elif .st == "idle" then (if $ascii == 1 then "o" else "○" end)
+            else $dim + (if $ascii == 1 then "x" else "✖" end) + $rst end ) as $g
+        | ( if .has then "\(.done)/\(.total)" else "" end )                 as $cnt
+        | ( if .has then (.upd | ago) else "" end )                        as $age
+        | ( if .stale > 0 then "+\(.stale)" else "" end )                  as $stl
+        | ( if (.has | not) then $dim + "no tree yet — run /ttytree" + $rst
+            elif .cur == null then $dim + "nothing open — tree is clear" + $rst
+            else ( (if $nb > 0 then "" elif .live then "▸ " else "○ " end)
+                   + (.cur | icon) + (.cur | clip($w - $lead)) )
+                 | if $nb > 0 then $red + . + $rst else . end
+            end ) as $txt
+        | $g + " " + $b + (.proj | clip($pw) | pad($pw)) + $rst
+          + "  " + $dim + ($cnt | pad($cw)) + "  " + ($age | pad($aw)) + $rst
+          + (if $sw > 0 then "  " + $yel + ($stl | pad($sw)) + $rst else "" end)
+          + "  " + $txt ),
+
+      "", ( $dim + "   ttytree <name>  one tree in full · "
+            + "--all --full  every tree · --serve  browser" + $rst )'
+}
+
 if [ "$JSON" = 1 ]; then
   case "$MODE" in
     all)
@@ -316,16 +413,19 @@ fi
 
 case "$MODE" in
   all)
-    found=0
-    for d in "$TTYTREE_HOME"/*/; do
-      [ -d "$d" ] || continue
-      sid=$(basename "$d"); found=1
-      show_one "$sid"; echo
-    done
-    if [ "$found" = 0 ]; then echo "No sessions tracked yet."; fi
+    if [ "$FULL" = 0 ]; then
+      board
+    else
+      found=0
+      for sid in $(tt_all_sessions); do
+        found=1; show_one "$sid"; echo
+      done
+      if [ "$found" = 0 ]; then echo "No sessions tracked yet."; fi
+    fi
     ;;
   path)
-    sid="${ARG:-$(tt_resolve_session)}"; [ -n "$sid" ] && tt_tree "$sid" || echo "not in a Claude Code session" >&2
+    sid=$([ -n "$ARG" ] && tt_match_session "$ARG" || tt_resolve_session)
+    [ -n "$sid" ] && tt_tree "$sid" || { echo "not in a Claude Code session" >&2; exit 1; }
     ;;
   events)
     sid=$(tt_resolve_session)
@@ -333,7 +433,7 @@ case "$MODE" in
     tail -n "$n" "$(tt_events "$sid")" 2>/dev/null | jq -c '{ts,tools,files,dirty,prompt:(.prompt[0:70])}'
     ;;
   next)
-    sid="${ARG:-$(tt_resolve_session)}"
+    sid=$([ -n "$ARG" ] && tt_match_session "$ARG" || tt_resolve_session)
     tf=$(tt_tree "$sid")
     if [ ! -f "$tf" ]; then
       echo "No tree yet — run /ttytree in this session first." >&2; exit 1
@@ -358,6 +458,7 @@ case "$MODE" in
     [ "$ASCII" = 1 ] && fwd+=(--ascii)
     [ "$ICONS" = 0 ] && [ "$ASCII" = 0 ] && fwd+=(--no-icons)
     [ "$COLOR" = 0 ] && fwd+=(--no-color)
+    [ "$FULL" = 1 ] && fwd+=(--full)
     while :; do
       out=$( "$0" --all "${fwd[@]+"${fwd[@]}"}" 2>&1 )
       printf '\033[H\033[2J'                # home + clear
@@ -409,8 +510,31 @@ case "$MODE" in
             ] | join("\n")
           end )'
     ;;
+  serve|html)
+    if ! command -v python3 >/dev/null 2>&1; then
+      echo "ttytree: --serve/--html need python3 (the terminal views don't)" >&2; exit 1
+    fi
+    dash="$SELF_DIR/../lib/dashboard.py"
+    if [ ! -f "$dash" ]; then echo "ttytree: missing $dash" >&2; exit 1; fi
+    if [ "$MODE" = serve ]; then
+      port="${ARG:-7777}"; case "$port" in ''|*[!0-9]*) port=7777 ;; esac
+      exec python3 "$dash" --serve "$port" --cli "$SELF_DIR/ttytree" \
+                   --icon-map "$(tt_icon_rules)"
+    fi
+    "$0" --json --all | python3 "$dash" --once --icon-map "$(tt_icon_rules)"
+    ;;
   session)
-    sid="${ARG:-$(tt_resolve_session)}"
+    if [ -n "$ARG" ]; then
+      sid=$(tt_match_session "$ARG") || true
+      if [ -z "$sid" ]; then
+        printf 'ttytree: no session matching %s\n\n' "$ARG" >&2
+        printf 'tracked:\n' >&2
+        for s in $(tt_all_sessions); do printf '  %s\n' "$(tt_project_of "$s")"; done >&2
+        exit 1
+      fi
+    else
+      sid=$(tt_resolve_session)
+    fi
     if [ -z "$sid" ]; then
       echo "Not running inside a Claude Code session. Try: ttytree --all" >&2; exit 1
     fi

@@ -163,8 +163,36 @@ facts, not 144k of transcript.
 
 ### Every terminal at once
 
+`ttytree --all` gives you one line per terminal. Blocked sessions sort to the
+top, then busy, then whatever you touched most recently:
+
 ```console
 $ ttytree --all
+
+ttytree · 4 sessions · 2 blocked · 4 with unrecorded turns
+
+⛔ orchard-api      9/14   7m   +1   staging credentials expired
+⛔ pocketledger     12/18  36m  +2   🚀 pricing still unset in App Store Connect
+● orchard-web      14/16  3d   +11  ▸ checkout redesign
+○ warehouse-etl    16/27  3d   +4   ▸ 💾 backfill 2024 orders
+
+   ttytree <name>  one tree in full · --all --full  every tree · --serve  browser
+```
+
+`+11` means eleven turns happened that the tree hasn't absorbed yet. Four
+sessions is 6 lines instead of 93; eight terminals still fits on one screen.
+
+Then drill in by name — no session ids to copy:
+
+```console
+$ ttytree orchard-api
+```
+
+Sometimes you want the shape, not the summary — `--all --full` prints every
+tree:
+
+```console
+$ ttytree --all --full
 
 orchard-api  ttys000 · idle · 4e1b8a03
 ├─ ✔ 💾 Postgres schema + migrations
@@ -261,6 +289,24 @@ Line one is what you're doing. Line two is how far along, whether the tree has
 fallen behind, and what's next. Line three appears only when something is
 blocked. It costs nothing — the statusline runs the CLI, not the model.
 
+### The dashboard
+
+For the whole picture at once, `ttytree --serve` runs a local page you keep in a
+browser tab. It re-reads every 10 seconds, so refreshing is optional:
+
+```console
+$ ttytree --serve
+ttytree dashboard  http://localhost:7777
+  live · localhost only · ctrl-c to stop
+```
+
+One card per terminal, sorted the same way the board is: progress bar, what's
+active, blockers called out in red, and completed items folded behind a
+disclosure. It binds to `127.0.0.1` only — your session names never leave the
+machine. Needs `python3` (the terminal views don't).
+
+`ttytree --html > board.html` writes the same page as a static snapshot.
+
 ### A live view
 
 Keep one plain terminal open as a control tower:
@@ -270,21 +316,16 @@ $ ttytree --watch
 
 ttytree · 09:14:02 · refreshing every 5s · ctrl-c to quit
 
-orchard-api  ttys000 · idle · 4e1b8a03 · updated 2h ago
-├─ ✔ 💾 Postgres schema + migrations
-├─ ▸ 🔌 Webhook delivery
-│  └─ ○ 🔌 dead-letter queue
-└─ ○ 🚀 Deploy to staging
+ttytree · 3 sessions · 1 blocked
 
-pocketledger  ttys004 · idle · 7f3a1c92 · updated 20m ago
-├─ ✔   Receipt OCR pipeline
-├─ ▸   Expense categorisation
-├─ ⛔ 🔐 Plaid sandbox keys expired
-└─ ○ 🚀 Ship to TestFlight
+⛔ pocketledger    12/18  36m  🔐 Plaid sandbox keys expired
+● orchard-api     9/14   2m   ▸ 🔌 retry with exponential backoff
+○ warehouse-etl   4/9    2h   ▸ 💾 backfill 2024 orders
 ```
 
-`ttytree --watch 2` to refresh faster. Because that tab has no Claude session in
-it, watching costs nothing at all.
+`ttytree --watch 2` to refresh faster, `--watch --full` for whole trees. Because
+that tab has no Claude session in it, watching costs nothing at all. If you'd
+rather have it in a browser, that's `--serve` above.
 
 ### Running it from inside Claude Code
 
@@ -297,7 +338,11 @@ expensive way to see a tree.
 | Command | What it does | Tokens |
 |---|---|---|
 | `ttytree` | this terminal's tree | 0 |
-| `ttytree --all` | every tracked session | 0 |
+| `ttytree <name>` | a session by project name | 0 |
+| `ttytree --all` | the board — one line per session | 0 |
+| `ttytree --all --full` | every tree in full | 0 |
+| `ttytree --serve [port]` | live dashboard in the browser (default 7777) | 0 |
+| `ttytree --html` | write the dashboard to stdout | 0 |
 | `ttytree --watch [n]` | live view, redraws every n seconds (default 5) | 0 |
 | `ttytree --statusline` | 2–3 line summary for Claude Code's statusLine | 0 |
 | `ttytree --events [n]` | raw facts the hook captured | 0 |
@@ -458,6 +503,7 @@ jump-to-terminal. Those are solved well by the tools above; duplicating them
 would trade this project's one advantage for a fight it can't win.
 
 - [x] ~~Always-on statusline and a live `--watch` view.~~
+- [x] ~~A board across all terminals, and a browser dashboard.~~
 - [ ] **Per-item time-in-state** — the header shows tree age; individual items
       don't carry timestamps yet, so a `[~]` stuck for two days can't say so.
 - [ ] **Project rollup** — aggregate the session trees of every terminal in one
