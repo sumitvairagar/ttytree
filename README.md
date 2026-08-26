@@ -149,11 +149,47 @@ restart it.
 
 ---
 
-## Examples
+## Using it
 
-### Coming back to a cold terminal
+Four steps. Only the two `/ttytree` runs cost anything at all.
 
-You switch to a tab you left before lunch. Instead of asking Claude anything:
+### 1. First run: `/ttytree`
+
+In any Claude session that's been doing work for a while, type:
+
+```
+> /ttytree
+```
+
+There's no tree yet, so this run **creates** one. Claude builds it from the
+context it already has — it does not go read the 578 KB transcript, which is the
+entire point — and writes it to `~/.claude/ttytree/<session>/tree.md`:
+
+```
+> /ttytree
+
+  New tree for orchard-api, seeded from this session. Schema and auth are done,
+  webhook delivery is the live branch, staging is blocked on credentials.
+
+orchard-api  ttys000 · busy · 4e1b8a03
+├─ ✔ 💾 Postgres schema + migrations
+├─ ✔ 🔐 JWT auth middleware
+├─ ▸ 🔌 Webhook delivery
+│  ├─ ✔ 🔐 signing + replay protection
+│  └─ ▸   retry with exponential backoff
+├─ ⛔ 🔐 staging credentials expired
+└─ ○ 🚀 Deploy to staging
+```
+
+**About 2k tokens, once per terminal.** From here the file exists on disk, and
+everything below gets cheap. (On a session that's only a few turns old there's
+nothing to describe yet — work a while first.)
+
+### 2. Keep working — the hook records for free
+
+Nothing to run and nothing to remember. After every turn the `Stop` hook appends
+a few hundred bytes of facts — tools used, files touched, your prompt — for
+**zero tokens**. Look whenever you like, and it still costs nothing:
 
 ```console
 $ ttytree
@@ -163,21 +199,70 @@ orchard-api  ttys000 · idle · 4e1b8a03
 ├─ ✔ 🔐 JWT auth middleware
 ├─ ▸ 🔌 Webhook delivery
 │  ├─ ✔ 🔐 signing + replay protection
-│  ├─ ▸   retry with exponential backoff
-│  │  ├─ ✔   jitter
-│  │  └─ ○ 🔌 dead-letter queue
-│  └─ ○ 📈 delivery metrics
-├─ ○ 📈 Per-tenant rate limiting
+│  └─ ▸   retry with exponential backoff
+├─ ⛔ 🔐 staging credentials expired
 └─ ○ 🚀 Deploy to staging
 
    7 turns, 12 file(s) touched since this tree was updated — run /ttytree to fold them in
 ```
 
-That last line is the tell: work happened after the tree was last updated. Run
-`/ttytree` and Claude folds those 7 turns in — reading ~250 tokens of captured
-facts, not 144k of transcript.
+That last line is the tell: the tree is **7 turns behind**. Nothing is lost —
+the facts are already on disk, waiting to be interpreted.
 
-### Every terminal at once
+Inside Claude Code, type `!ttytree` — the `!` prefix runs it as a shell command.
+Typing plain `ttytree` sends it to the model, which is the slowest and most
+expensive way to look at a file.
+
+### 3. Later: `/ttytree` again
+
+Now the interesting run. The tree exists, so Claude reads it plus **only the
+events newer than it** — roughly 250 tokens of captured facts instead of 144k of
+transcript — and folds them in:
+
+```
+> /ttytree
+
+  Folded in 7 turns. Backoff is done — jitter and the dead-letter queue both
+  landed, and the retry tests pass. Delivery metrics is the open thread now;
+  credentials came through, so nothing is blocked.
+
+orchard-api  ttys000 · busy · 4e1b8a03
+├─ ✔ 💾 Postgres schema + migrations
+├─ ✔ 🔐 JWT auth middleware
+├─ ▸ 🔌 Webhook delivery
+│  ├─ ✔ 🔐 signing + replay protection
+│  ├─ ✔   retry with exponential backoff
+│  ├─ ▸ 📈 delivery metrics
+│  └─ ○ 🐛 alert on repeated failures
+├─ ○ 📈 Per-tenant rate limiting
+└─ ○ 🚀 Deploy to staging
+```
+
+Still under 2k tokens, and it stays that way at turn 500 — the cost tracks *new
+turns*, not session length. Run it whenever you're about to walk away, and again
+when you come back.
+
+**Right after `/compact` is when it pays the most.** The model just lost its
+context; the tree is a file, so it didn't.
+
+### 4. See every terminal at once
+
+Once two or three terminals have trees, the point of the thing shows up:
+
+```console
+$ ttytree --all          # the board, in this terminal, 0 tokens
+$ ttytree --serve        # the dashboard, in a browser tab, 0 tokens
+```
+
+`--serve` is [the page at the top of this README](#ttytree) — every terminal down
+the left worst-first, every blocker across every project in one place, refreshing
+itself every 10 seconds. It never calls a model, so you can leave it open all day.
+
+---
+
+## Every view in full
+
+### The board
 
 `ttytree --all` gives you one line per terminal. Blocked sessions sort to the
 top, then busy, then whatever you touched most recently:
@@ -187,7 +272,7 @@ $ ttytree --all
 
 ttytree · 4 sessions · you are in orchard-web · 2 blocked · 4 with unrecorded turns
 
-  ⛔ orchard-api      9/14   7m   +1   staging credentials expired
+  ⛔ orchard-api      9/14   7m   +1   🔐 staging credentials expired
   ⛔ pocketledger     12/18  36m  +2   🚀 pricing still unset in App Store Connect
 › ● orchard-web      14/16  3d   +11  ▸ checkout redesign
   ○ warehouse-etl    16/27  3d   +4   ▸ 💾 backfill 2024 orders
@@ -241,27 +326,6 @@ warehouse-etl  ttys002 · idle · c8f04a17
 ```
 
 Two blocked terminals, visible in one glance, without entering either tab.
-
-### Updating the tree
-
-```
-> /ttytree
-
-  Folded in 7 turns. Backoff is done — jitter and the dead-letter queue both
-  landed, and the retry tests pass. Delivery metrics is now the open thread;
-  nothing is blocked.
-
-orchard-api  ttys000 · busy · 4e1b8a03
-├─ ✔ 💾 Postgres schema + migrations
-├─ ✔ 🔐 JWT auth middleware
-├─ ▸ 🔌 Webhook delivery
-│  ├─ ✔ 🔐 signing + replay protection
-│  ├─ ✔   retry with exponential backoff
-│  ├─ ▸ 📈 delivery metrics
-│  └─ ○ 🐛 alert on repeated failures
-├─ ○ 📈 Per-tenant rate limiting
-└─ ○ 🚀 Deploy to staging
-```
 
 ### Quick edits without a model
 
@@ -368,12 +432,6 @@ ttytree · 3 sessions · 1 blocked
 `ttytree --watch 2` to refresh faster, `--watch --full` for whole trees. Because
 that tab has no Claude session in it, watching costs nothing at all. If you'd
 rather have it in a browser, that's `--serve` above.
-
-### Running it from inside Claude Code
-
-Type `!ttytree` — the `!` prefix runs a shell command directly. Typing plain
-`ttytree` would send it to Claude as a message, which is the slowest and most
-expensive way to see a tree.
 
 ## Commands
 
