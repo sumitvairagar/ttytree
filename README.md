@@ -301,6 +301,10 @@ ttytree dashboard  http://localhost:7777
   live · localhost only · ctrl-c to stop
 ```
 
+![The ttytree dashboard: a rail of every terminal on the left, four counts
+across the top, and every blocker across every terminal listed under "needs
+you"](docs/img/dashboard.png)
+
 Down the left is every terminal, worst first: a status dot, the project, how
 far along it is, and how many turns its tree hasn't absorbed. The terminal you
 started the server from is marked `here`. Click one, or press <kbd>J</kbd> /
@@ -317,9 +321,19 @@ its progress, and how stale its tree is.
 what it is working on, and then the whole tree as a document — a state glyph per
 line, indentation that holds, done items receding so the open ones stand out.
 
+![A single terminal in the dashboard: counts for done, in progress, queued and
+blocked, then the blocker and current item called out, then the full tree
+rendered as an indented document](docs/img/terminal.png)
+
 Bottom left: **Auto / Light / Dark** and **A− / A+** for text size. Auto follows
-your system; an explicit choice wins over it. Both are remembered in that
-browser, so the page comes back the way you left it.
+your system; an explicit choice wins over it. Text runs 14–26px, default 17.
+Both are remembered in that browser, so the page comes back the way you left it.
+
+Two typefaces do the work: a monospace carries the structure — project names,
+counts, tty, labels — so columns line up the way they do in the terminal, and a
+text face carries the prose. Four type sizes, a perfect fourth apart. The page
+is checked against [impeccable](https://github.com/pbakaus/impeccable)'s
+detector and passes clean.
 
 It binds to `127.0.0.1` only — your session names never leave the machine.
 Needs `python3` (the terminal views don't).
