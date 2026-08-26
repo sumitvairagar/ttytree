@@ -4,6 +4,22 @@
 progress, next, blocked. Per terminal, kept up to date for you, and free to keep
 up to date.
 
+![The ttytree dashboard: a rail of every terminal on the left, four counts
+across the top, and every blocker across every terminal listed under "needs
+you"](docs/img/dashboard.png)
+
+<sub>`ttytree --serve` — every terminal worst-first down the left, every blocker
+across every terminal in one place.</sub>
+
+![A single terminal in the dashboard: counts for done, in progress, queued and
+blocked, then the blocker and current item called out, then the full tree
+rendered as an indented document](docs/img/terminal.png)
+
+<sub>One terminal in full: what it is blocked on, what it is working on, and the
+whole tree as a document.</sub>
+
+And the same trees in the terminal, where the work actually happens:
+
 ```console
 $ ttytree
 
@@ -301,13 +317,10 @@ ttytree dashboard  http://localhost:7777
   live · localhost only · ctrl-c to stop
 ```
 
-![The ttytree dashboard: a rail of every terminal on the left, four counts
-across the top, and every blocker across every terminal listed under "needs
-you"](docs/img/dashboard.png)
-
-Down the left is every terminal, worst first: a status dot, the project, how
-far along it is, and how many turns its tree hasn't absorbed. The terminal you
-started the server from is marked `here`. Click one, or press <kbd>J</kbd> /
+Both views are pictured at the top of this README. Down the left is every
+terminal, worst first: a status dot, the project, how far along it is, and how
+many turns its tree hasn't absorbed. The terminal you started the server from
+is marked `here`. Click one, or press <kbd>J</kbd> /
 <kbd>K</kbd> to walk the list, <kbd>1</kbd>–<kbd>9</kbd> to jump, <kbd>D</kbd>
 for the dashboard.
 
@@ -320,10 +333,6 @@ its progress, and how stale its tree is.
 **A terminal** is the detail view: the path, tty and pid, what it is blocked on,
 what it is working on, and then the whole tree as a document — a state glyph per
 line, indentation that holds, done items receding so the open ones stand out.
-
-![A single terminal in the dashboard: counts for done, in progress, queued and
-blocked, then the blocker and current item called out, then the full tree
-rendered as an indented document](docs/img/terminal.png)
 
 Bottom left: **Auto / Light / Dark** and **A− / A+** for text size. Auto follows
 your system; an explicit choice wins over it. Text runs 14–26px, default 17.
